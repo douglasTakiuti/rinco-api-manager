@@ -5,23 +5,16 @@ use Exception;
 
 class ApiManager
 {
-    protected $jobId;
-    protected $token;
+    protected $data;
 
     function __construct(string $jobId, string $token) 
     {
-        $this->jobId = $jobId;
-        $this->token = $token;
-    }
-    public function getData(): array
-    {
         $ch = curl_init();
 
-        $baseURL = getenv("RINCO_API_MANAGER_URL") ?? "https://rinco.io/api/";
-        curl_setopt($ch, CURLOPT_URL, $baseURL . $this->jobId);
+        curl_setopt($ch, CURLOPT_URL, "https://rinco.io/api/" . $jobId);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: ' . $this->token,
+            'Authorization: ' . $token,
             'Content-Type: application/json',
         ]);
 
@@ -35,6 +28,25 @@ class ApiManager
 
         curl_close($ch);
 
-        return json_decode($response);
+        $this->data = json_decode($response);
+    }
+    public function get(string $path): mixed
+    {
+        $keys = explode('->', $path);
+        $value = $this->data;
+
+        foreach ($keys as $key) {
+            if (is_object($value) && property_exists($value, $key)) {
+                $value = $value->$key;
+            } else {
+                throw new Exception("Key not found: $key");
+            }
+        }
+
+        return $value;
+    }
+    public function getAll(): object
+    {
+        return $this->data;
     }
 }
